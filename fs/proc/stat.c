@@ -28,7 +28,11 @@ static u64 get_idle_time(int cpu)
 
 	if (idle_time == -1ULL) {
 		/* !NO_HZ so we can rely on cpustat.idle */
+<<<<<<< HEAD
 		idle = kcpustat_cpu(cpu).cpustat[CPUTIME_IDLE];
+=======
+		idle = kstat_cpu(cpu).cpustat.idle;
+>>>>>>> 6486163... [S390] cputime: add sparse checking and cleanup
 		idle += arch_idle_time(cpu);
 	} else
 		idle = usecs_to_cputime(idle_time);
@@ -67,6 +71,7 @@ static int show_stat(struct seq_file *p, void *v)
 	jif = boottime.tv_sec;
 
 	for_each_possible_cpu(i) {
+<<<<<<< HEAD
 		user += kcpustat_cpu(i).cpustat[CPUTIME_USER];
 		nice += kcpustat_cpu(i).cpustat[CPUTIME_NICE];
 		system += kcpustat_cpu(i).cpustat[CPUTIME_SYSTEM];
@@ -77,6 +82,20 @@ static int show_stat(struct seq_file *p, void *v)
 		steal += kcpustat_cpu(i).cpustat[CPUTIME_STEAL];
 		guest += kcpustat_cpu(i).cpustat[CPUTIME_GUEST];
 		guest_nice += kcpustat_cpu(i).cpustat[CPUTIME_GUEST_NICE];
+=======
+		user += kstat_cpu(i).cpustat.user;
+		nice += kstat_cpu(i).cpustat.nice;
+		system += kstat_cpu(i).cpustat.system;
+		idle += get_idle_time(i);
+		iowait += get_iowait_time(i);
+		irq += kstat_cpu(i).cpustat.irq;
+		softirq += kstat_cpu(i).cpustat.softirq;
+		steal += kstat_cpu(i).cpustat.steal;
+		guest += kstat_cpu(i).cpustat.guest;
+		guest_nice += kstat_cpu(i).cpustat.guest_nice;
+		sum += kstat_cpu_irqs_sum(i);
+		sum += arch_irq_stat_cpu(i);
+>>>>>>> 6486163... [S390] cputime: add sparse checking and cleanup
 
 		for (j = 0; j < NR_SOFTIRQS; j++) {
 			unsigned int softirq_stat = kstat_softirqs_cpu(j, i);
