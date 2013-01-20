@@ -442,4 +442,6 @@ extern unsigned int screen_off_max_freq;
 extern unsigned int screen_on_min_freq;
 extern unsigned int max_capped;
 
+const char *cpufreq_get_current_driver(void);
+
 #endif /* _LINUX_CPUFREQ_H */
