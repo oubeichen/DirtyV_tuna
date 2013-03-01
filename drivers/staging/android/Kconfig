@@ -116,6 +116,15 @@ config ANDROID_LOW_MEMORY_KILLER_DO_NOT_KILL_PROCESS
 	  white-lists to not be killed by lowmemorykiller, unless
 	  it is absolutely necessary.
 
+config SYNC
+	bool "Synchronization framework"
+	default n
+	select ANON_INODES
+	help
+	  This option enables the framework for synchronization between multiple
+	  drivers.  Sync implementations can take advantage of hardware
+	  synchronization built into devices like GPUs.
+
 endif # if ANDROID
 
 endmenu
