@@ -42,14 +42,10 @@
 static struct cpufreq_driver *cpufreq_driver;
 static DEFINE_PER_CPU(struct cpufreq_policy *, cpufreq_cpu_data);
 #ifdef CONFIG_HOTPLUG_CPU
-
 /* This one keeps track of the previously set governor of a removed CPU */
 static DEFINE_PER_CPU(char[CPUFREQ_NAME_LEN], cpufreq_cpu_governor);
 #endif
 static DEFINE_SPINLOCK(cpufreq_driver_lock);
-
-/* Used when we unregister cpufreq driver */
-static struct cpumask cpufreq_online_mask;
 
 /*
  * cpu_policy_rwsem is a per CPU reader-writer semaphore designed to cure
@@ -1004,8 +1000,7 @@ static int cpufreq_add_dev(struct sys_device *sys_dev)
 	 * managing offline cpus here.
 	 */
 	cpumask_and(policy->cpus, policy->cpus, cpu_online_mask);
-	cpumask_and(policy->cpus, policy->cpus, &cpufreq_online_mask);
-	
+
 	policy->user_policy.min = policy->min;
 	policy->user_policy.max = policy->max;
 
@@ -1209,7 +1204,6 @@ static int cpufreq_remove_dev(struct sys_device *sys_dev)
 	if (unlikely(lock_policy_rwsem_write(cpu)))
 		BUG();
 
-	cpumask_clear_cpu(cpu, &cpufreq_online_mask);
 	retval = __cpufreq_remove_dev(sys_dev);
 	return retval;
 }
@@ -1948,8 +1942,6 @@ int cpufreq_register_driver(struct cpufreq_driver *driver_data)
 	}
 	cpufreq_driver = driver_data;
 	spin_unlock_irqrestore(&cpufreq_driver_lock, flags);
-
-	cpumask_setall(&cpufreq_online_mask);
 
 	ret = sysdev_driver_register(&cpu_sysdev_class,
 					&cpufreq_sysdev_driver);
