@@ -506,7 +506,7 @@ static ssize_t store_gpu_oc(struct cpufreq_policy *policy, const char *buf, size
 {
 	int prev_oc, ret1, ret2; 
         struct device *dev;
-	unsigned long gpu_freqs[3] = {384000000,460800000,537600000};
+	unsigned long gpu_freqs[3] = {307200000,384000000,512000000};
 
 	prev_oc = oc_val;
 	if (prev_oc < 0 || prev_oc > 2) {
