@@ -11,16 +11,17 @@ enum alarmtimer_type {
 	ALARM_BOOTTIME,
 
 	ALARM_NUMTYPE,
-  };
-
-enum alarmtimer_restart {
-  ALARMTIMER_NORESTART,
-  ALARMTIMER_RESTART,
 };
 
-#define ALARMTIMER_STATE_INACTIVE  0x00
-#define ALARMTIMER_STATE_ENQUEUED  0x01
-#define ALARMTIMER_STATE_CALLBACK  0x02
+enum alarmtimer_restart {
+	ALARMTIMER_NORESTART,
+	ALARMTIMER_RESTART,
+};
+
+
+#define ALARMTIMER_STATE_INACTIVE	0x00
+#define ALARMTIMER_STATE_ENQUEUED	0x01
+#define ALARMTIMER_STATE_CALLBACK	0x02
 
 /**
  * struct alarm - Alarm timer structure
@@ -33,18 +34,15 @@ enum alarmtimer_restart {
  * @data:	Internal data value.
  */
 struct alarm {
-	enum alarmtimer_restart  (*function)(struct alarm *, ktime_t now);
-	void			(*function)(struct alarm *);
+	struct timerqueue_node	node;
+	enum alarmtimer_restart	(*function)(struct alarm *, ktime_t now);
 	enum alarmtimer_type	type;
-	int      		state;
+	int			state;
 	void			*data;
 };
 
 void alarm_init(struct alarm *alarm, enum alarmtimer_type type,
-		void (*function)(struct alarm *));
-void alarm_start(struct alarm *alarm, ktime_t start, ktime_t period);
-void alarm_cancel(struct alarm *alarm);
-    enum alarmtimer_restart (*function)(struct alarm *, ktime_t));
+		enum alarmtimer_restart (*function)(struct alarm *, ktime_t));
 void alarm_start(struct alarm *alarm, ktime_t start);
 int alarm_try_to_cancel(struct alarm *alarm);
 int alarm_cancel(struct alarm *alarm);
@@ -57,7 +55,7 @@ u64 alarm_forward(struct alarm *alarm, ktime_t now, ktime_t interval);
  */
 static inline int alarmtimer_active(const struct alarm *timer)
 {
-  return timer->state != ALARMTIMER_STATE_INACTIVE;
+	return timer->state != ALARMTIMER_STATE_INACTIVE;
 }
 
 /*
@@ -65,7 +63,7 @@ static inline int alarmtimer_active(const struct alarm *timer)
  */
 static inline int alarmtimer_is_queued(struct alarm *timer)
 {
-  return timer->state & ALARMTIMER_STATE_ENQUEUED;
+	return timer->state & ALARMTIMER_STATE_ENQUEUED;
 }
 
 /*
@@ -74,7 +72,9 @@ static inline int alarmtimer_is_queued(struct alarm *timer)
  */
 static inline int alarmtimer_callback_running(struct alarm *timer)
 {
-  return timer->state & ALARMTIMER_STATE_CALLBACK;
+	return timer->state & ALARMTIMER_STATE_CALLBACK;
 }
 
+
 #endif
+
