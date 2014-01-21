@@ -483,8 +483,8 @@ struct task_cputime {
 
 #define INIT_CPUTIME	\
 	(struct task_cputime) {					\
-		.utime = 0,					\
-		.stime = 0,					\
+		.utime = cputime_zero,				\
+		.stime = cputime_zero,				\
 		.sum_exec_runtime = 0,				\
 	}
 
