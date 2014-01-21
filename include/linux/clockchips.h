@@ -52,8 +52,6 @@ enum clock_event_nofitiers {
  * - Clockevent source stops in C3 State and needs broadcast support.
  * - Local APIC timer is used as a dummy device.
  */
-#define CLOCK_EVT_FEAT_C3STOP		0x000004
-#define CLOCK_EVT_FEAT_DUMMY		0x000008
 #define CLOCK_EVT_FEAT_C3STOP           0x000008
 #define CLOCK_EVT_FEAT_DUMMY            0x000010
 /**
