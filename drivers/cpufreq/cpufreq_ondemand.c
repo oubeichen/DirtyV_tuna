@@ -126,7 +126,6 @@ static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 	u64 busy_time;
 
 	cur_wall_time = jiffies64_to_cputime64(get_jiffies_64());
-<<<<<<< HEAD
 	busy_time = kcpustat_cpu(cpu).cpustat[CPUTIME_USER] +
 		    kcpustat_cpu(cpu).cpustat[CPUTIME_SYSTEM];
 
@@ -136,16 +135,6 @@ static inline u64 get_cpu_idle_time_jiffy(unsigned int cpu, u64 *wall)
 	busy_time += kcpustat_cpu(cpu).cpustat[CPUTIME_NICE];
 
 	idle_time = cputime64_sub(cur_wall_time, busy_time);
-=======
-	busy_time  = kstat_cpu(cpu).cpustat.user;
-	busy_time += kstat_cpu(cpu).cpustat.system;
-	busy_time += kstat_cpu(cpu).cpustat.irq;
-	busy_time += kstat_cpu(cpu).cpustat.softirq;
-	busy_time += kstat_cpu(cpu).cpustat.steal;
-	busy_time += kstat_cpu(cpu).cpustat.nice;
-
-	idle_time = cur_wall_time - busy_time;
->>>>>>> 6486163... [S390] cputime: add sparse checking and cleanup
 	if (wall)
 		*wall = jiffies_to_usecs(cur_wall_time);
 
@@ -452,29 +441,24 @@ static void dbs_check_cpu(struct cpu_dbs_info_s *this_dbs_info)
 		cur_idle_time = get_cpu_idle_time(j, &cur_wall_time);
 		cur_iowait_time = get_cpu_iowait_time(j, &cur_wall_time);
 
-		wall_time = (unsigned int)
-			(cur_wall_time - j_dbs_info->prev_cpu_wall);
+		wall_time = (unsigned int) cputime64_sub(cur_wall_time,
+				j_dbs_info->prev_cpu_wall);
 		j_dbs_info->prev_cpu_wall = cur_wall_time;
 
-		idle_time = (unsigned int)
-			(cur_idle_time - j_dbs_info->prev_cpu_idle);
+		idle_time = (unsigned int) cputime64_sub(cur_idle_time,
+				j_dbs_info->prev_cpu_idle);
 		j_dbs_info->prev_cpu_idle = cur_idle_time;
 
-		iowait_time = (unsigned int)
-			(cur_iowait_time - j_dbs_info->prev_cpu_iowait);
+		iowait_time = (unsigned int) cputime64_sub(cur_iowait_time,
+				j_dbs_info->prev_cpu_iowait);
 		j_dbs_info->prev_cpu_iowait = cur_iowait_time;
 
 		if (dbs_tuners_ins.ignore_nice) {
 			u64 cur_nice;
 			unsigned long cur_nice_jiffies;
 
-<<<<<<< HEAD
 			cur_nice = kcpustat_cpu(j).cpustat[CPUTIME_NICE] -
 					 j_dbs_info->prev_cpu_nice;
-=======
-			cur_nice = kstat_cpu(j).cpustat.nice -
-					j_dbs_info->prev_cpu_nice;
->>>>>>> 6486163... [S390] cputime: add sparse checking and cleanup
 			/*
 			 * Assumption: nice time between sampling periods will
 			 * be less than 2^32 jiffies for 32 bit sys
