@@ -747,9 +747,9 @@ static struct s6e8aa0_factory_calibration_info tuna_oled_factory_info_8500k = {
 	},
 	.color_adj = {
 		.mult = {
-			1900000000U,
-			1950000000U,
-			2150000000U,
+			2163736680U,
+			1976041377U,
+			1614370595U,
 		},
 		.rshift = 31,
 	},
@@ -795,9 +795,9 @@ static struct s6e8aa0_factory_calibration_info tuna_oled_factory_info_6500k = {
 	},
 	.color_adj = {
 		.mult = {
-			1900000000U,
-			1950000000U,
-			2150000000U,
+			2004318071U,
+			2004318071U,
+			2004318071U,
 		},
 		.rshift = 31,
 	},
@@ -843,9 +843,9 @@ static struct s6e8aa0_factory_calibration_info tuna_oled_factory_info_sm2a2 = {
 	},
 	.color_adj = {
 		.mult = {
-			1900000000U,
-			1950000000U,
-			2150000000U,
+			2004318071U,
+			2004318071U,
+			2004318071U,
 		},
 		.rshift = 31,
 	},
