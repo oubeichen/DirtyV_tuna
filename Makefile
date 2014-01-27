@@ -249,13 +249,9 @@ HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O2 -fomit-frame-p
 HOSTCXXFLAGS = -O2
 HOSTCC       = $(CCACHE) gcc
 HOSTCXX      = $(CCACHE) g++
-ifdef CCONFIG_CC_OPTIMIZE_O3
- HOSTCFLAGS   = -Wall -W -Wmissing-prototypes -Wno-sign-compare -Wstrict-prototypes -Wno-unused-parameter -Wno-missing-field-initializers -O3 -fno-delete-null-pointer-checks
- HOSTCXXFLAGS = -O3 -Wall -W -fno-delete-null-pointer-checks
-else
- HOSTCFLAGS   = -Wall -W -Wmissing-prototypes -Wno-sign-compare -Wstrict-prototypes -Wno-unused-parameter -Wno-missing-field-initializers -O2 -fno-delete-null-pointer-checks
- HOSTCXXFLAGS = -O2 -Wall -W -fno-delete-null-pointer-checks
-endif
+HOSTCFLAGS   = -Wall -W -Wmissing-prototypes -Wno-sign-compare -Wstrict-prototypes -Wno-unused-parameter -Wno-missing-field-initializers -O2 -fno-delete-null-pointer-checks
+HOSTCXXFLAGS = -O2 -Wall -W -fno-delete-null-pointer-checks
+
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
 
@@ -376,16 +372,17 @@ KBUILD_CFLAGS   := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
 		   -fno-strict-aliasing -fno-common \
 		   -Werror-implicit-function-declaration \
 		   -Wno-format-security \
-		   -Werror-implicit-function-declaration \
 		   -fmodulo-sched -fmodulo-sched-allow-regmoves \
 		   -march=armv7-a -mcpu=cortex-a9 -mtune=cortex-a9 \
 		   -funswitch-loops -fpredictive-commoning -fgcse-after-reload \
-		   -fno-delete-null-pointer-checks
+		   -fno-delete-null-pointer-checks \
+		   -ffast-math -fsingle-precision-constant \
+		   -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr
 KBUILD_AFLAGS_KERNEL :=
 ifdef CCONFIG_CC_OPTIMIZE_O3
- KBUILD_CFLAGS_KERNEL := -O3 -mtune=cortex-a9 -march=armv7-a -mfpu=neon -ftree-vectorize
+ KBUILD_CFLAGS_KERNEL := -O3 -mtune=cortex-a9 -march=armv7-a -mfpu=neon -fno-tree-vectorize
 else
- KBUILD_CFLAGS_KERNEL := -O2 -mtune=cortex-a9 -march=armv7-a -mfpu=neon -ftree-vectorize
+ KBUILD_CFLAGS_KERNEL := -O2 -mtune=cortex-a9 -march=armv7-a -mfpu=neon -fno-tree-vectorize
 endif
 
 ifdef CONFIG_CC_GRAPHITE_OPTIMIZATION
