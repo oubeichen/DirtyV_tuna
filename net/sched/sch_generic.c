@@ -672,10 +672,10 @@ struct Qdisc *dev_graft_qdisc(struct netdev_queue *dev_queue,
 		qdisc_reset(oqdisc);
 
 	/* ... and graft new one */
-	if (qdisc == NULL)
+	if (qdisc == 0)
 		qdisc = &noop_qdisc;
 	dev_queue->qdisc_sleeping = qdisc;
-	rcu_assign_pointer(dev_queue->qdisc, &noop_qdisc);
+	rcu_assign_pointer(dev_queue->qdisc, qdisc);
 
 	spin_unlock_bh(root_lock);
 
