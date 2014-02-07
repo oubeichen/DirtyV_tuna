@@ -382,7 +382,7 @@ else
 endif
 
 ifdef CONFIG_CC_GRAPHITE_OPTIMIZATION
-KBUILD_CFLAGS        += -floop-interchange -floop-strip-mine \
+KBUILD_CFLAGS        += -floop-interchange -floop-strip-mine -ftree-parallelize-loops=2 -floop-parallelize-all \
                  -floop-block
 endif
 
