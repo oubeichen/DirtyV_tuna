@@ -245,8 +245,8 @@ CONFIG_SHELL := $(shell if [ -x "$$BASH" ]; then echo $$BASH; \
 
 HOSTCC       = $(CCACHE) gcc
 HOSTCXX      = $(CCACHE) g++
-HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fno-tree-vectorize -fomit-frame-pointer
-HOSTCXXFLAGS = -O3 -fno-tree-vectorize
+HOSTCFLAGS   = -Wall -Wmissing-prototypes -Wstrict-prototypes -O3 -fomit-frame-pointer
+HOSTCXXFLAGS = -O3
 
 # Decide whether to build built-in, modular, or both.
 # Normally, just do built-in.
@@ -347,7 +347,7 @@ CHECK		= sparse
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
-OPTIMIZATION_FLAGS = -march=armv7-a -mtune=cortex-a9 -mfpu=neon \
+OPTIMIZATION_FLAGS = -march=armv7-a -mcpu=cortex-a9 -mtune=cortex-a9 -mfpu=neon \
                      -ffast-math -fsingle-precision-constant \
                      -fgcse-lm -fgcse-sm -fsched-spec-load -fforce-addr
 CFLAGS_MODULE = $(OPTIMIZATION_FLAGS) -fno-pic
@@ -373,12 +373,12 @@ KBUILD_CFLAGS := -Wall -Wundef -Wstrict-prototypes -Wno-trigraphs \
                    -Werror-implicit-function-declaration \
                    -Wno-format-security \
                    -fno-delete-null-pointer-checks \
-                   -mtune=cortex-a9 -march=armv7-a -mfpu=neon
+                   -mcpu=cortex-a9 -mtune=cortex-a9 -march=armv7-a -mfpu=neon 
 KBUILD_AFLAGS_KERNEL :=
 ifdef CCONFIG_CC_OPTIMIZE_O3
- KBUILD_CFLAGS_KERNEL := -O3 -mtune=cortex-a9 -march=armv7-a -mfpu=neon -ftree-vectorize
+ KBUILD_CFLAGS_KERNEL := -O3 -mcpu=cortex-a9 -mtune=cortex-a9 -march=armv7-a -mfpu=neon -ftree-vectorize
 else
- KBUILD_CFLAGS_KERNEL := -O2 -mtune=cortex-a9 -march=armv7-a -mfpu=neon -ftree-vectorize
+ KBUILD_CFLAGS_KERNEL := -O2 -mcpu=cortex-a9 -mtune=cortex-a9 -march=armv7-a -mfpu=neon -ftree-vectorize
 endif
 
 ifdef CONFIG_CC_GRAPHITE_OPTIMIZATION
@@ -578,13 +578,13 @@ endif # $(dot-config)
 all: vmlinux
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
- KBUILD_CFLAGS	+= -Os -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -fno-inline-functions
+ KBUILD_CFLAGS	+= -Os -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-inline-functions
 endif
 ifdef CONFIG_CC_OPTIMIZE_DEFAULT
- KBUILD_CFLAGS	+= -O2 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -fno-inline-functions
+ KBUILD_CFLAGS	+= -O2 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-inline-functions
 endif
 ifdef CONFIG_CC_OPTIMIZE_O3
- KBUILD_CFLAGS  += -O3 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-tree-vectorize -fno-inline-functions
+ KBUILD_CFLAGS  += -O3 -fmodulo-sched -fmodulo-sched-allow-regmoves -fno-inline-functions
 endif
 
 include $(srctree)/arch/$(SRCARCH)/Makefile
