@@ -468,6 +468,10 @@ struct rq {
 	unsigned char nohz_balance_kick;
 #endif
 	int skip_clock_update;
+	
+	/* time-based average load */
+	u64 nr_last_stamp;
+	unsigned int ave_nr_running;
 
 	/* capture load from *all* tasks on this cpu: */
 	struct load_weight load;
@@ -5922,6 +5926,14 @@ void sched_show_task(struct task_struct *p)
 		task_pid_nr(p), task_pid_nr(p->real_parent),
 		(unsigned long)task_thread_info(p)->flags);
 
+#ifdef CONFIG_LOWMEM_CHECK
+	if (p->mm != NULL)
+		printk(KERN_INFO "file page total: %lu lowmem: %lu, anon page total: %lu lowmem: %lu \n",
+			get_mm_counter(p->mm, MM_FILEPAGES),
+			get_mm_counter(p->mm, MM_FILE_LOWPAGES),
+			get_mm_counter(p->mm, MM_ANONPAGES),
+			get_mm_counter(p->mm, MM_ANON_LOWPAGES));
+#endif
 	show_stack(p, NULL);
 }
 
