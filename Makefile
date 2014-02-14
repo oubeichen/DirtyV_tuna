@@ -387,7 +387,7 @@ KBUILD_CFLAGS        += -floop-interchange -floop-strip-mine -ftree-parallelize-
 endif
 
 ifdef CONFIG_CC_LINK_TIME_OPTIMIZATION
-KBUILD_CFLAGS        += -flto -fno-toplevel-reorder
+KBUILD_CFLAGS        += -flto -fno-toplevel-reorder -fno-fat-lto-objects -ftlo=2
 endif
 
 KBUILD_AFLAGS   := -D__ASSEMBLY__
