@@ -154,8 +154,7 @@
 #define OMAP_MMC4_DEVID		3
 #define OMAP_MMC5_DEVID		4
 
-#define MMC_TIMEOUT_MS         20              /* 20 mSec */
-#define MMC_TIMEOUT_US         20000           /* 20000 micro Sec */
+#define MMC_TIMEOUT_MS		20
 #define OMAP_MMC_MASTER_CLOCK	96000000
 #define DRIVER_NAME		"omap_hsmmc"
 
@@ -1124,7 +1123,8 @@ static inline void omap_hsmmc_reset_controller_fsm(struct omap_hsmmc_host *host,
 						   unsigned long bit)
 {
 	unsigned long i = 0;
-	unsigned long limit = MMC_TIMEOUT_US;
+	unsigned long limit = (loops_per_jiffy *
+				msecs_to_jiffies(MMC_TIMEOUT_MS));
 
 	OMAP_HSMMC_WRITE(host->base, SYSCTL,
 			 OMAP_HSMMC_READ(host->base, SYSCTL) | bit);
@@ -1136,13 +1136,13 @@ static inline void omap_hsmmc_reset_controller_fsm(struct omap_hsmmc_host *host,
 	if (mmc_slot(host).features & HSMMC_HAS_UPDATED_RESET) {
 		while ((!(OMAP_HSMMC_READ(host->base, SYSCTL) & bit))
 					&& (i++ < limit))
-			udelay(1);
+			cpu_relax();
 	}
 	i = 0;
 
 	while ((OMAP_HSMMC_READ(host->base, SYSCTL) & bit) &&
 		(i++ < limit))
-		udelay(1);
+		cpu_relax();
 
 	if (OMAP_HSMMC_READ(host->base, SYSCTL) & bit)
 		dev_err(mmc_dev(host->mmc),
