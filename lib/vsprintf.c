@@ -326,32 +326,6 @@ done:
  */
 int num_to_str(char *buf, int size, unsigned long long num)
 {
-	char tmp[sizeof(num) * 3];
-	int idx, len;
-
-	/* put_dec() may work incorrectly for num = 0 (generate "", not "0") */
-	if (num <= 9) {
-		tmp[0] = '0' + num;
-		len = 1;
-	} else {
-		len = put_dec(tmp, num) - tmp;
-	}
-
-	if (len > size)
-		return 0;
-	for (idx = 0; idx < len; ++idx)
-		buf[idx] = tmp[len - idx - 1];
-	return len;
-}
-
-/*
- * Convert passed number to decimal string.
- * Returns the length of string.  On buffer overflow, returns 0.
- *
- * If speed is not important, use snprintf(). It's easy to read the code.
- */
-int num_to_str(char *buf, int size, unsigned long long num)
-{
 	char tmp[21];		/* Enough for 2^64 in decimal */
 	int idx, len;
 
