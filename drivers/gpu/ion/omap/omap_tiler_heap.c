@@ -145,6 +145,7 @@ int omap_tiler_alloc(struct ion_heap *heap,
 	}
 
 	buffer = ion_handle_buffer(handle);
+	buffer->heap = heap;	/* clarify tiler heap */
 	buffer->size = info->n_tiler_pages * PAGE_SIZE;
 	buffer->priv_virt = info;
 	data->handle = handle;
@@ -212,6 +213,7 @@ int omap_tiler_pages(struct ion_client *client, struct ion_handle *handle,
 	*tiler_addrs = info->tiler_addrs;
 	return 0;
 }
+EXPORT_SYMBOL(omap_tiler_pages);
 
 int omap_tiler_heap_map_user(struct ion_heap *heap, struct ion_buffer *buffer,
 			     struct vm_area_struct *vma)

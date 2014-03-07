@@ -15,6 +15,7 @@ config ARM
 	select HAVE_FUNCTION_TRACER if (!XIP_KERNEL)
 	select HAVE_FTRACE_MCOUNT_RECORD if (!XIP_KERNEL)
 	select HAVE_DYNAMIC_FTRACE if (!XIP_KERNEL)
+        select HAVE_EFFICIENT_UNALIGNED_ACCESS if (CPU_V6 || CPU_V6K || CPU_V7) && MMU
 	select HAVE_FUNCTION_GRAPH_TRACER if (!THUMB2_KERNEL)
 	select HAVE_GENERIC_DMA_COHERENT
 	select HAVE_KERNEL_GZIP
@@ -41,6 +42,10 @@ config ARM
 	  manufactured, but legacy ARM-based PC hardware remains popular in
 	  Europe.  There is an ARM Linux project with a web page at
 	  <http://www.arm.linux.org.uk/>.
+
+config ARM_HAS_SG_CHAIN
+	bool
+	default y
 
 config HAVE_PWM
 	bool
@@ -1435,8 +1440,6 @@ choice
 	  If you are not absolutely sure what you are doing, leave this
 	  option alone!
 
-	config VMSPLIT_TUNA_OPT
-		bool "2.5G/1.5G user/kernel split"
 	config VMSPLIT_3G
 		bool "3G/1G user/kernel split"
 	config VMSPLIT_2G
@@ -1449,7 +1452,6 @@ config PAGE_OFFSET
 	hex
 	default 0x40000000 if VMSPLIT_1G
 	default 0x80000000 if VMSPLIT_2G
-	default 0xA0000000 if VMSPLIT_TUNA_OPT
 	default 0xC0000000
 
 config NR_CPUS

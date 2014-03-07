@@ -355,6 +355,15 @@ CHECK		= sparse
 
 CHECKFLAGS     := -D__linux__ -Dlinux -D__STDC__ -Dunix -D__unix__ \
 		  -Wbitwise -Wno-return-void $(CF)
+
+LOW_ARM_FLAGS	= -march=armv7-a -mtune=cortex-a9 \
+		  -mfpu=neon -mfloat-abi=softfp
+
+ARM_FLAGS         -marm -march=armv7-a -mtune=cortex-a9 \
+		  -mfpu=neon -mfloat-abi=softfp \
+		  -fsingle-precision-constant -mvectorize-with-neon-quad
+		 
+
 CFLAGS_MODULE   = -fno-pic
 AFLAGS_MODULE   =
 LDFLAGS_MODULE  =
@@ -586,7 +595,7 @@ endif # $(dot-config)
 all: vmlinux
 
 ifdef CONFIG_CC_OPTIMIZE_FOR_SIZE
- KBUILD_CFLAGS	+= -Os
+ KBUILD_CFLAGS	+= -Os $(call cc-disable-warning,maybe-uninitialized,)
 endif
 ifdef CONFIG_CC_OPTIMIZE_DEFAULT
  KBUILD_CFLAGS	+= -O2

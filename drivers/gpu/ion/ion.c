@@ -20,6 +20,7 @@
 #include <linux/anon_inodes.h>
 #include <linux/ion.h>
 #include <linux/list.h>
+#include <linux/memblock.h>
 #include <linux/miscdevice.h>
 #include <linux/mm.h>
 #include <linux/mm_types.h>
@@ -32,77 +33,6 @@
 
 #include "ion_priv.h"
 #define DEBUG
-
-/**
- * struct ion_device - the metadata of the ion device node
- * @dev:		the actual misc device
- * @buffers:	an rb tree of all the existing buffers
- * @lock:		lock protecting the buffers & heaps trees
- * @heaps:		list of all the heaps in the system
- * @user_clients:	list of all the clients created from userspace
- */
-struct ion_device {
-	struct miscdevice dev;
-	struct rb_root buffers;
-	struct mutex lock;
-	struct rb_root heaps;
-	long (*custom_ioctl) (struct ion_client *client, unsigned int cmd,
-			      unsigned long arg);
-	struct rb_root user_clients;
-	struct rb_root kernel_clients;
-	struct dentry *debug_root;
-};
-
-/**
- * struct ion_client - a process/hw block local address space
- * @ref:		for reference counting the client
- * @node:		node in the tree of all clients
- * @dev:		backpointer to ion device
- * @handles:		an rb tree of all the handles in this client
- * @lock:		lock protecting the tree of handles
- * @heap_mask:		mask of all supported heaps
- * @name:		used for debugging
- * @task:		used for debugging
- *
- * A client represents a list of buffers this client may access.
- * The mutex stored here is used to protect both handles tree
- * as well as the handles themselves, and should be held while modifying either.
- */
-struct ion_client {
-	struct kref ref;
-	struct rb_node node;
-	struct ion_device *dev;
-	struct rb_root handles;
-	struct mutex lock;
-	unsigned int heap_mask;
-	const char *name;
-	struct task_struct *task;
-	pid_t pid;
-	struct dentry *debug_root;
-};
-
-/**
- * ion_handle - a client local reference to a buffer
- * @ref:		reference count
- * @client:		back pointer to the client the buffer resides in
- * @buffer:		pointer to the buffer
- * @node:		node in the client's handle rbtree
- * @kmap_cnt:		count of times this client has mapped to kernel
- * @dmap_cnt:		count of times this client has mapped for dma
- * @usermap_cnt:	count of times this client has mapped for userspace
- *
- * Modifications to node, map_cnt or mapping should be protected by the
- * lock in the client.  Other fields are never changed after initialization.
- */
-struct ion_handle {
-	struct kref ref;
-	struct ion_client *client;
-	struct ion_buffer *buffer;
-	struct rb_node node;
-	unsigned int kmap_cnt;
-	unsigned int dmap_cnt;
-	unsigned int usermap_cnt;
-};
 
 /* this function should only be called while dev->lock is held */
 static void ion_buffer_add(struct ion_device *dev,
@@ -258,6 +188,34 @@ static bool ion_handle_validate(struct ion_client *client, struct ion_handle *ha
 	return false;
 }
 
+static bool ion_handle_validate_frm_dev(struct ion_device *dev,
+					struct ion_handle *handle)
+{
+	struct rb_node **p;
+	struct rb_node *parent = NULL;
+	struct ion_client *client;
+	struct rb_node *n;
+
+	p = &dev->user_clients.rb_node;
+	while (*p) {
+		parent = *p;
+		client = rb_entry(parent, struct ion_client, node);
+
+		n = client->handles.rb_node;
+		while (n) {
+			struct ion_handle *handle_node =
+					rb_entry(n, struct ion_handle, node);
+			if (handle < handle_node)
+				n = n->rb_left;
+			else if (handle > handle_node)
+				n = n->rb_right;
+			else
+				return true;
+		}
+	}
+	return false;
+}
+
 static void ion_handle_add(struct ion_client *client, struct ion_handle *handle)
 {
 	struct rb_node **p = &client->handles.rb_node;
@@ -336,8 +294,11 @@ EXPORT_SYMBOL(ion_alloc);
 
 void ion_free(struct ion_client *client, struct ion_handle *handle)
 {
+
 	bool valid_handle;
 
+	if (WARN_ON(!client || !handle))
+		return;
 	BUG_ON(client != handle->client);
 
 	mutex_lock(&client->lock);
@@ -410,6 +371,31 @@ int ion_phys(struct ion_client *client, struct ion_handle *handle,
 }
 EXPORT_SYMBOL(ion_phys);
 
+int ion_phys_frm_dev(struct ion_device *dev, struct ion_handle *handle,
+	     ion_phys_addr_t *addr, size_t *len)
+{
+	struct ion_buffer *buffer;
+	int ret;
+
+	/* TBD: Investigate why this validate_frm_dev is taking very long
+	* Once root-caused and fixed, then enable this below logic.
+	*/
+	/* if (!ion_handle_validate_frm_dev(dev, handle))
+		return -EINVAL;
+	*/
+
+	buffer = handle->buffer;
+
+	if (!buffer->heap->ops->phys) {
+		pr_err("%s: ion_phys is not implemented by this heap.\n", __func__);
+		return -ENODEV;
+	}
+	ret = buffer->heap->ops->phys(buffer->heap, buffer, addr, len);
+	return ret;
+}
+EXPORT_SYMBOL(ion_phys_frm_dev);
+
+
 void *ion_map_kernel(struct ion_client *client, struct ion_handle *handle)
 {
 	struct ion_buffer *buffer;
@@ -448,11 +434,11 @@ void *ion_map_kernel(struct ion_client *client, struct ion_handle *handle)
 }
 EXPORT_SYMBOL(ion_map_kernel);
 
-struct scatterlist *ion_map_dma(struct ion_client *client,
+struct sg_table *ion_map_dma(struct ion_client *client,
 				struct ion_handle *handle)
 {
 	struct ion_buffer *buffer;
-	struct scatterlist *sglist;
+	struct sg_table *table;
 
 	mutex_lock(&client->lock);
 	if (!ion_handle_validate(client, handle)) {
@@ -472,16 +458,16 @@ struct scatterlist *ion_map_dma(struct ion_client *client,
 		return ERR_PTR(-ENODEV);
 	}
 	if (_ion_map(&buffer->dmap_cnt, &handle->dmap_cnt)) {
-		sglist = buffer->heap->ops->map_dma(buffer->heap, buffer);
-		if (IS_ERR_OR_NULL(sglist))
+		table = buffer->heap->ops->map_dma(buffer->heap, buffer);
+		if (IS_ERR_OR_NULL(table))
 			_ion_unmap(&buffer->dmap_cnt, &handle->dmap_cnt);
-		buffer->sglist = sglist;
+		buffer->sg_table = table;
 	} else {
-		sglist = buffer->sglist;
+		table = buffer->sg_table;
 	}
 	mutex_unlock(&buffer->lock);
 	mutex_unlock(&client->lock);
-	return sglist;
+	return table;
 }
 EXPORT_SYMBOL(ion_map_dma);
 
@@ -510,7 +496,7 @@ void ion_unmap_dma(struct ion_client *client, struct ion_handle *handle)
 	mutex_lock(&buffer->lock);
 	if (_ion_unmap(&buffer->dmap_cnt, &handle->dmap_cnt)) {
 		buffer->heap->ops->unmap_dma(buffer->heap, buffer);
-		buffer->sglist = NULL;
+		buffer->sg_table = NULL;
 	}
 	mutex_unlock(&buffer->lock);
 	mutex_unlock(&client->lock);
@@ -1062,7 +1048,7 @@ static const struct file_operations ion_fops = {
 };
 
 static size_t ion_debug_heap_total(struct ion_client *client,
-				   enum ion_heap_type type)
+				   unsigned int id)
 {
 	size_t size = 0;
 	struct rb_node *n;
@@ -1072,7 +1058,7 @@ static size_t ion_debug_heap_total(struct ion_client *client,
 		struct ion_handle *handle = rb_entry(n,
 						     struct ion_handle,
 						     node);
-		if (handle->buffer->heap->type == type)
+		if (handle->buffer->heap->id == id)
 			size += handle->buffer->size;
 	}
 	mutex_unlock(&client->lock);
@@ -1090,7 +1076,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 		struct ion_client *client = rb_entry(n, struct ion_client,
 						     node);
 		char task_comm[TASK_COMM_LEN];
-		size_t size = ion_debug_heap_total(client, heap->type);
+		size_t size = ion_debug_heap_total(client, heap->id);
 		if (!size)
 			continue;
 
@@ -1102,7 +1088,7 @@ static int ion_debug_heap_show(struct seq_file *s, void *unused)
 	for (n = rb_first(&dev->kernel_clients); n; n = rb_next(n)) {
 		struct ion_client *client = rb_entry(n, struct ion_client,
 						     node);
-		size_t size = ion_debug_heap_total(client, heap->type);
+		size_t size = ion_debug_heap_total(client, heap->id);
 		if (!size)
 			continue;
 		seq_printf(s, "%16.s %16u %16u\n", client->name, client->pid,
@@ -1194,4 +1180,20 @@ void ion_device_destroy(struct ion_device *dev)
 	misc_deregister(&dev->dev);
 	/* XXX need to free the heaps and clients ? */
 	kfree(dev);
+}
+
+void __init ion_reserve(struct ion_platform_data *data)
+{
+	int i, ret;
+
+	for (i = 0; i < data->nr; i++) {
+		if (data->heaps[i].size == 0)
+			continue;
+		ret = memblock_reserve(data->heaps[i].base,
+				       data->heaps[i].size);
+		if (ret)
+			pr_err("memblock reserve of %x@%lx failed\n",
+			       data->heaps[i].size,
+			       data->heaps[i].base);
+	}
 }

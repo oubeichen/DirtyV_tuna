@@ -55,6 +55,9 @@
 #include <net/sock.h>
 #include <net/netlink.h>
 #include <linux/skbuff.h>
+#ifdef CONFIG_SECURITY
+#include <linux/security.h>
+#endif
 #include <linux/netlink.h>
 #include <linux/freezer.h>
 #include <linux/tty.h>
@@ -623,7 +626,7 @@ static int audit_log_common_recv_msg(struct audit_buffer **ab, u16 msg_type,
 	}
 
 	*ab = audit_log_start(NULL, GFP_KERNEL, msg_type);
-	audit_log_format(*ab, "user pid=%d uid=%u auid=%u ses=%u",
+	audit_log_format(*ab, "pid=%d uid=%u auid=%u ses=%u",
 			 pid, uid, auid, ses);
 	if (sid) {
 		rc = security_secid_to_secctx(sid, &ctx, &len);
@@ -1414,7 +1417,7 @@ void audit_log_d_path(struct audit_buffer *ab, const char *prefix,
 	char *p, *pathname;
 
 	if (prefix)
-		audit_log_format(ab, " %s", prefix);
+		audit_log_format(ab, "%s", prefix);
 
 	/* We will allow 11 spaces for ' (deleted)' to be appended */
 	pathname = kmalloc(PATH_MAX+11, ab->gfp_mask);
@@ -1496,6 +1499,33 @@ void audit_log(struct audit_context *ctx, gfp_t gfp_mask, int type,
 		audit_log_end(ab);
 	}
 }
+
+#ifdef CONFIG_SECURITY
+
+/**
+ * audit_log_secctx - Converts and logs SELinux context
+ * @ab: audit_buffer
+ * @secid: security number
+ *
+ * This is a helper function that calls security_secid_to_secctx to convert
+ * secid to secctx and then adds the (converted) SELinux context to the audit
+ * log by caling audit_log_format, thus also preventing leak of internal secid
+ * touserspace. If secid cannot be converted audit_panic is called.
+ */
+void audit_log_secctx(struct audit_buffer *ab, u32 secid)
+{
+	u32 len;
+	char *secctx;
+
+	if (security_secid_to_secctx(secid, &secctx, &len)) {
+		audit_panic("Cannot convert secid to context");
+	} else {
+		audit_log_format(ab, " obj=%s", secctx);
+		security_release_secctx(secctx, len);
+	}
+}
+EXPORT_SYMBOL(audit_log_secctx);
+#endif
 
 EXPORT_SYMBOL(audit_log_start);
 EXPORT_SYMBOL(audit_log_end);

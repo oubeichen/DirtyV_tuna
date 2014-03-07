@@ -355,6 +355,7 @@ static int sync_fence_merge_pts(struct sync_fence *dst, struct sync_fence *src)
 					new_pt->fence = dst;
 					list_replace(&dst_pt->pt_list,
 						     &new_pt->pt_list);
+					sync_pt_activate(new_pt);
 					sync_pt_free(dst_pt);
 				}
 				collapsed = true;
@@ -370,6 +371,7 @@ static int sync_fence_merge_pts(struct sync_fence *dst, struct sync_fence *src)
 
 			new_pt->fence = dst;
 			list_add(&new_pt->pt_list, &dst->pt_list_head);
+			sync_pt_activate(new_pt);
 		}
 	}
 
@@ -526,26 +528,15 @@ static void sync_fence_signal_pt(struct sync_pt *pt)
 	}
 }
 
-int sync_fence_wait_async(struct sync_fence *fence,
-			  struct sync_fence_waiter *waiter)
+static bool sync_fence_check(struct sync_fence *fence)
 {
-	unsigned long flags;
-	int err = 0;
-
-	spin_lock_irqsave(&fence->waiter_list_lock, flags);
-
-	if (fence->status) {
-		err = fence->status;
-		goto out;
-	}
-
-	list_add_tail(&waiter->waiter_list, &fence->waiter_list_head);
-out:
-	spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
-
-	return err;
+	/*
+	 * Make sure that reads to fence->status are ordered with the
+	 * wait queue event triggering
+	 */
+	smp_rmb();
+	return fence->status != 0;
 }
-EXPORT_SYMBOL(sync_fence_wait_async);
 
 int sync_fence_cancel_async(struct sync_fence *fence,
 			     struct sync_fence_waiter *waiter)
@@ -573,17 +564,6 @@ int sync_fence_cancel_async(struct sync_fence *fence,
 	}
 	spin_unlock_irqrestore(&fence->waiter_list_lock, flags);
 	return ret;
-}
-EXPORT_SYMBOL(sync_fence_cancel_async);
-
-static bool sync_fence_check(struct sync_fence *fence)
-{
-	/*
-	 * Make sure that reads to fence->status are ordered with the
-	 * wait queue event triggering
-	 */
-	smp_rmb();
-	return fence->status != 0;
 }
 
 int sync_fence_wait(struct sync_fence *fence, long timeout)
